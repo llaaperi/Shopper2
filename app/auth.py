@@ -14,10 +14,10 @@ GOOGLE_DISCOVERY_URL = (
     "https://accounts.google.com/.well-known/openid-configuration"
 )
 
-# logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-logging.info(f"Confugured GOOGLE_CLIENT_ID={GOOGLE_CLIENT_ID}")
-logging.info(f"Confugured GOOGLE_CLIENT_SECRET={GOOGLE_CLIENT_SECRET}")
+logger.info(f"Confugured GOOGLE_CLIENT_ID={GOOGLE_CLIENT_ID}")
+logger.info(f"Confugured GOOGLE_CLIENT_SECRET={GOOGLE_CLIENT_SECRET}")
 
 # OAuth 2 client setup
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
@@ -28,7 +28,7 @@ def get_google_provider_cfg():
 
 def prepare_request_uri(redirect_uri):
     """"""
-    logging.info(f"Preparing authorization URI with <redirect_uri={redirect_uri}>")
+    logger.info(f"Preparing authorization URI with <redirect_uri={redirect_uri}>")
     # Find out what URL to hit for Google login
     google_provider_cfg = get_google_provider_cfg()
     authorization_endpoint = google_provider_cfg["authorization_endpoint"]
@@ -44,7 +44,7 @@ def prepare_request_uri(redirect_uri):
 
 def get_userinfo(code, request_url, redirect_url):
     """"""
-    logging.info(f"Get userinfo with <code={code}>")
+    logger.info(f"Get userinfo with <code={code}>")
     # Find out what URL to hit to get tokens that allow you to ask for
     # things on behalf of a user
     google_provider_cfg = get_google_provider_cfg()
