@@ -84,13 +84,11 @@ def callback():
     # Make sure the email is verified
     if not userinfo or not userinfo.get("email_verified"):
         return "User email not available or not verified by Google.", 400
-
     # Parse user info
     user_id = userinfo.get("sub")
     user_name = userinfo.get("name")
     user_email = userinfo.get("email")
     user_picture = userinfo.get("picture")
-
     # Load or create user
     user = db.session.query(User).filter_by(id=user_id).first()
     current_time = datetime.datetime.now()
@@ -103,6 +101,7 @@ def callback():
     db.session.commit()
 
     # Begin user session
+    logger.info(f"Login {user}")
     login_user(user)
 
     # Redirect to homepage

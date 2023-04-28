@@ -11,3 +11,6 @@ class User(Base, db.Model, UserMixin):
     picture = db.Column(db.String)
     login_first = db.Column(db.DateTime)
     login_latest = db.Column(db.DateTime)
+
+    def __repr__(self):
+        return f"<User:{self.email}>"
