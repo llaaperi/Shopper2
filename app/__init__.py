@@ -1,7 +1,6 @@
 # Python standard libraries
 import os
 import json
-import logging
 import datetime
 
 # Third-party libraries
@@ -15,11 +14,10 @@ from flask_login import (
     logout_user,
 )
 
-from app import auth
+from app import logger, auth
 
-logging.basicConfig(level=logging.INFO)
 
-logger = logging.getLogger(__name__)
+logger = logger.get(__name__)
 
 #############
 # Flask app #
