@@ -1,3 +1,3 @@
-from app import app
+from app import flask_app
 
-app.run(ssl_context="adhoc", debug=True)
+flask_app.run(ssl_context="adhoc", debug=True)

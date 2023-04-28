@@ -2,10 +2,11 @@
 import os
 import json
 import logging
-import sqlite3
+import datetime
 
 # Third-party libraries
 from flask import Flask, redirect, request, url_for
+from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
     LoginManager,
     current_user,
@@ -13,8 +14,6 @@ from flask_login import (
     login_user,
     logout_user,
 )
-from oauthlib.oauth2 import WebApplicationClient
-import requests
 
 from app import auth
 
@@ -22,32 +21,43 @@ logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
+#############
+# Flask app #
+#############
 
-# Flask app setup
-app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24)
+flask_app = Flask(__name__)
+flask_app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24)
 
 
-# User session management setup
+############
+# Database #
+############
+
+db = SQLAlchemy()
+flask_app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///shopper.db"
+db.init_app(flask_app)
+
+# Import models before creating database
+from app.models import User
+
+with flask_app.app_context():
+    db.create_all()
+
+
+###########
+# Session #
+###########
+
 # https://flask-login.readthedocs.io/en/latest
 login_manager = LoginManager()
-login_manager.init_app(app)
+login_manager.init_app(flask_app)
 
-from app.user import User
-from app.db import init_db_command
-# Naive database setup
-try:
-    init_db_command()
-except sqlite3.OperationalError:
-    # Assume it's already been created
-    pass
-
-# Flask-Login helper to retrieve a user from our db
+# Flask-Login helper to load user
 @login_manager.user_loader
 def load_user(user_id):
-    return User.get(user_id)
+    return db.get_or_404(User, user_id)
 
-@app.route("/")
+@flask_app.route("/")
 def index():
     if current_user.is_authenticated:
         return (
@@ -61,39 +71,44 @@ def index():
     else:
         return '<a class="button" href="/login">Google Login</a>'
 
-@app.route("/login")
+@flask_app.route("/login")
 def login():
     request_uri = auth.prepare_request_uri(request.base_url + "/callback")
     return redirect(request_uri)
 
-@app.route("/login/callback")
+@flask_app.route("/login/callback")
 def callback():
     # Get authorization code Google sent back to you
     code = request.args.get("code")
     userinfo = auth.get_userinfo(code, request.url, request.base_url)
-    print(userinfo)
     # Make sure the email is verified
     if not userinfo or not userinfo.get("email_verified"):
         return "User email not available or not verified by Google.", 400
 
-
+    # Parse user info
     user_id = userinfo.get("sub")
     user_name = userinfo.get("name")
     user_email = userinfo.get("email")
     user_picture = userinfo.get("picture")
-    user = User(user_id, user_name, user_email, user_picture)
 
-    # Doesn't exist? Add it to the database.
-    if not User.get(user_id):
-        User.create(user_id, user_name, user_email, user_picture)
+    # Load or create user
+    user = db.session.query(User).filter_by(id=user_id).first()
+    current_time = datetime.datetime.now()
+    if not user:
+        user = User(id=user_id, name=user_name, email=user_email, picture=user_picture)
+        user.created = current_time
+        user.login_first = current_time
+        db.session.add(user)
+    user.login_latest = current_time
+    db.session.commit()
 
-    # # Begin user session by logging the user in
+    # Begin user session
     login_user(user)
 
-    # Send user back to homepage
+    # Redirect to homepage
     return redirect(url_for("index"))
 
-@app.route("/logout")
+@flask_app.route("/logout")
 @login_required
 def logout():
     logout_user()
